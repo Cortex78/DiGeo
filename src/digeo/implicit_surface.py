@@ -40,7 +40,8 @@ class ImplicitSurface:
         The gradient points outwards from the surface.
         """
         with torch.enable_grad():
-            points_req_grad = points.requires_grad_(True)
+            # Ensure the points tensor requires grad, but avoid in-place on non-leaf
+            points_req_grad = points if points.requires_grad else points.detach().requires_grad_(True)
             sdf_val = self.sdf_func(points_req_grad)
 
             grad_outputs = torch.ones_like(sdf_val)
@@ -111,7 +112,8 @@ class ImplicitPointBatch:
             raise ValueError("positions must be a 2D tensor of shape (B, 3).")
 
         self.positions: Tensor = positions
-        self.positions.requires_grad_()
+        if not self.positions.requires_grad:
+            self.positions.requires_grad_()
 
     @overload
     def to(self, device: Union[str, torch.device]) -> "ImplicitPointBatch": ...
